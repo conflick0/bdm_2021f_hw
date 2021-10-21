@@ -60,7 +60,23 @@ if __name__ == '__main__':
     min_val = data.reduce(lambda a, b: a if a < b else b)
     count_val = data.map(lambda x: 1).reduce(lambda a, b: a + b)
 
+    # cal mean by map reduce
+    sum_val, count_val = data.map(lambda x: (x, 1))\
+        .reduce(lambda a, b: (a[0] + b[0], a[1] + b[1]))
+    
+    mean_val = sum_val / count_val
+
+    # cal mean by agg
+    sum_val2, count_val2 = data.aggregate(
+        (0, 0),
+        (lambda acc, value: (acc[0] + value, acc[1] + 1)),
+        (lambda acc1, acc2: (acc1[0] + acc2[0], acc1[1] + acc2[1]))
+    )
+    mean_val2 = sum_val2 / count_val2
+
     # show result
     print(max_val)
     print(min_val)
     print(count_val)
+    print(mean_val)
+    print(mean_val2)
