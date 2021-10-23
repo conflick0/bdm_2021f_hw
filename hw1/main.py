@@ -80,9 +80,17 @@ if __name__ == '__main__':
         .reduceByKey(lambda a, b: a + b)\
         .map(lambda x: math.sqrt(x[1]/count_val[x[0]])).collect()
 
+    # min max norm 
+    data_norm = data.map(lambda x: (
+                x[0], 
+                (x[1] - min_val[x[0]])/(max_val[x[0]] - min_val[x[0]])
+            )
+        )
+
     # show result
     print(f'max: {max_val}')
     print(f'min: {min_val}')
     print(f'count: {count_val}')
     print(f'mean: {mean_val}')
     print(f'std: {std_val}')
+    print(f'min max norm:\n{data_norm.take(8)}')
