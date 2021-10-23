@@ -50,13 +50,13 @@ if __name__ == '__main__':
     # build key value pair (field_name, value)
     data = data.flatMap(lambda x: x)
 
-    # # remove null value
+    # remove null value
     data = data.filter(lambda x: x[1] is not None)
 
     # # cal max, min and count
     max_val = data.reduceByKey(lambda a, b: a if a > b else b)
-    # min_val = data.reduce(lambda a, b: a if a < b else b)
-    # count_val = data.map(lambda x: 1).reduce(lambda a, b: a + b)
+    min_val = data.reduceByKey(lambda a, b: a if a < b else b)
+    count_val = data.map(lambda x: (x[0], 1)).reduceByKey(lambda a, b: a + b)
 
     # # cal mean by map reduce
     # sum_val, count_val = data.map(lambda x: (x, 1))\
@@ -74,7 +74,7 @@ if __name__ == '__main__':
 
     # # show result
     print(max_val.collect())
-    # print(min_val)
-    # print(count_val)
+    print(min_val.collect())
+    print(count_val.collect())
     # print(mean_val)
     # print(mean_val2)
