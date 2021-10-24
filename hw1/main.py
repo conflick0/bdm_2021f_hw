@@ -1,4 +1,5 @@
 import math
+from pyspark.sql import SparkSession
 from pyspark import SparkContext, SparkConf
 
 
@@ -21,6 +22,38 @@ def parse_line(line):
     )
 
 
+def cal_min_max_norm(val, max_val, min_val):
+    if val is None: return val
+    return (val - min_val) / (max_val - min_val)
+
+
+def cal_row_min_max_norm(xs, max_vals, min_vals):
+    return tuple(map(
+        lambda x: cal_min_max_norm(
+            x[1],
+            max_vals[x[0]], 
+            min_vals[x[0]]),
+        xs
+    ))
+
+
+def create_result_df(result_vals, category, schema):
+    '''create df for max, min, count, mean and std result'''
+    result_rows = []
+    for c, vs in zip(category, result_vals):
+        row = [c]
+        row.extend([str(v) for v in vs])
+        result_rows.append(row)
+    
+    schema_row = ['category']
+    schema_row.extend(schema)
+    
+    return spark.createDataFrame(
+        result_rows,
+        schema_row
+    )
+
+
 if __name__ == '__main__':
     # schema
     schema = [
@@ -36,9 +69,10 @@ if __name__ == '__main__':
     # init spark
     conf = SparkConf().setAppName('Test').setMaster('local')
     sc = SparkContext(conf=conf)
+    spark = SparkSession(sc)
 
-    # turn off log info
-    sc.setLogLevel("WARN")  
+    # set log only error
+    sc.setLogLevel("ERROR")  
 
     # read data
     data = sc.textFile(data_file)
@@ -48,49 +82,55 @@ if __name__ == '__main__':
     data = data.filter(lambda x: x != header)
 
     # extract target fields
-    data = data.map(parse_line)
+    raw_data = data.map(parse_line)
 
     # build key value pair (field_name, value)
-    data = data.flatMap(lambda x: x)
+    data = raw_data.flatMap(lambda x: x)
 
     # remove null value
     data = data.filter(lambda x: x[1] is not None)
 
     # cal max
-    max_val = data.reduceByKey(lambda a, b: a if a > b else b)\
+    max_vals = data.reduceByKey(lambda a, b: a if a > b else b)\
         .map(lambda x: x[1]).collect()
 
     # cal min
-    min_val = data.reduceByKey(lambda a, b: a if a < b else b)\
+    min_vals = data.reduceByKey(lambda a, b: a if a < b else b)\
         .map(lambda x: x[1]).collect()
     
     # cal count
-    count_val = data.map(lambda x: (x[0], 1))\
+    count_vals = data.map(lambda x: (x[0], 1))\
         .reduceByKey(lambda a, b: a + b)\
         .map(lambda x: x[1]).collect()
 
     # cal mean
-    mean_val = data.mapValues(lambda x: (x, 1))\
+    mean_vals = data.mapValues(lambda x: (x, 1))\
         .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
         .mapValues(lambda x: x[0]/x[1])\
         .map(lambda x: x[1]).collect()
     
     # cal std
-    std_val = data.map(lambda x: (x[0], (x[1] - mean_val[x[0]])**2))\
+    std_vals = data.map(lambda x: (x[0], (x[1] - mean_vals[x[0]])**2))\
         .reduceByKey(lambda a, b: a + b)\
-        .map(lambda x: math.sqrt(x[1]/count_val[x[0]])).collect()
+        .map(lambda x: math.sqrt(x[1]/count_vals[x[0]])).collect()
 
-    # min max norm 
-    data_norm = data.map(lambda x: (
-                x[0], 
-                (x[1] - min_val[x[0]])/(max_val[x[0]] - min_val[x[0]])
-            )
-        )
+    # cal min max norm 
+    norm_data = raw_data.map(
+        lambda x: cal_row_min_max_norm(x, max_vals, min_vals)
+    )
 
+    # convert rdd to df
+    norm_df = norm_data.toDF(schema)
+    
+    # create df for min, max, count, mean and count result
+    result_df = create_result_df(
+        [max_vals, min_vals, count_vals, mean_vals, std_vals],
+        ['max', 'min', 'mean', 'count', 'mean', 'std'],
+        schema
+    )
+    
     # show result
-    print(f'max: {max_val}')
-    print(f'min: {min_val}')
-    print(f'count: {count_val}')
-    print(f'mean: {mean_val}')
-    print(f'std: {std_val}')
-    print(f'min max norm:\n{data_norm.take(8)}')
+    print('result:')
+    result_df.show()
+    print(f'min max norm:')
+    norm_df.show(5)
