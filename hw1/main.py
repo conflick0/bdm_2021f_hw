@@ -125,7 +125,7 @@ if __name__ == '__main__':
     # create df for min, max, count, mean and count result
     result_df = create_result_df(
         [max_vals, min_vals, count_vals, mean_vals, std_vals],
-        ['max', 'min', 'mean', 'count', 'mean', 'std'],
+        ['max', 'min', 'count', 'mean', 'std'],
         schema
     )
     
