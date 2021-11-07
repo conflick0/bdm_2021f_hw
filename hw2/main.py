@@ -1,11 +1,11 @@
 import math
 import re
+import time
 from pyspark.sql import SparkSession
 from pyspark import SparkContext, SparkConf
 
 
 def extract_words(s):
-    # check nan
     if s is None: return ['']
     s = re.sub(r'[^\x00-\x7f]',r'', s)
     return tuple(s.strip('"').split(" "))
@@ -17,9 +17,17 @@ def count_word_by_total(data, field_idx):
         .flatMap(lambda x: x)\
         .map(lambda w: (w, 1)) \
         .reduceByKey(lambda a, b: a + b)\
-        .map(lambda x: (x[1], [x[0]]))\
-        .reduceByKey(lambda a, b: a + b)\
-        .sortBy(lambda x: x[0], False)
+        .sortBy(lambda x: x[1], False)
+
+
+def count_word_by_topic(data, topic, field_idx):
+    return data\
+        .filter(lambda x: x[4] == topic)\
+        .map(lambda x: extract_words(x[field_idx]))\
+        .flatMap(lambda x: x)\
+        .map(lambda w: (w, 1))\
+        .reduceByKey(lambda a, b: a+b)\
+        .sortBy(lambda x: x[1], False)
 
 
 if __name__ == '__main__':
@@ -40,11 +48,15 @@ if __name__ == '__main__':
     header = news_data.first()
     news_data = news_data.filter(lambda x: x != header)
 
-    # title total word count
+    # total word count
     title_wc = count_word_by_total(news_data, field_idx=1)
 
-    # head line total word count
-    head_line_wc = count_word_by_total(news_data, field_idx=2)
-
+    # word count by topic
+    title_topic_wc = count_word_by_topic(
+        news_data, 
+        'obama', 
+        field_idx=1
+    )
+    
     print(title_wc.take(5))
-    print(head_line_wc.take(5))
+    print(title_topic_wc.take(4))
