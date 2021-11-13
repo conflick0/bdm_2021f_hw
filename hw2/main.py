@@ -219,6 +219,39 @@ class Task2:
         print(f'li pop by day: {self.li_avg_pop.by_day.take(4)}')
 
 
+def cal_sum_avg_sentiment(data):
+    return data\
+        .map(
+            lambda r: (
+                (('title', r[4]), (float(r[6]), 1)),
+                (('head line', r[4]), (float(r[7]), 1)),
+            )
+        )\
+        .flatMap(lambda x: x)\
+        .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
+        .map(
+            lambda x: (x[0][0], x[0][1] ,x[1][0], x[1][0]/x[1][1])
+        )\
+        .sortBy(lambda x: (-ord(x[0][0]), ord(x[1][0])))
+
+
+class Task3:
+    def __init__(self, news_data):
+        self.sentiment = None
+        self.news_data = news_data
+    
+    @timer
+    def run(self):
+        self.sentiment = cal_sum_avg_sentiment(
+            self.news_data
+        )
+
+    def show(self):
+        col_names = ['type', 'topic', 'sum', 'avg']
+        s_df = self.sentiment.toDF(col_names)
+        s_df.show(truncate=False)
+
+
 if __name__ == '__main__':
     # init spark
     conf = SparkConf().setAppName('Test')
@@ -259,3 +292,8 @@ if __name__ == '__main__':
     task2 = Task2(fb_data, gp_data, li_data)
     task2.run()
     task2.show()
+
+    # run task3
+    task3 = Task3(news_data)
+    task3.run()
+    task3.show()
