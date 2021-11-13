@@ -1,11 +1,22 @@
 import re
 import string
 import time
+from functools import wraps
 from pyspark.sql import SparkSession
 from pyspark import SparkContext, SparkConf
 
 
-def read_csv(spark, file_path):
+def timer(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        exec_time = time.time()
+        func(*args, **kwargs)
+        exec_time = time.time() - exec_time
+        print(f'execution time: {exec_time} sec')
+    return wrapper
+
+
+def read_csv(file_path):
     # read csv file
     data = spark.read\
         .option("quote", "\"")\
@@ -93,7 +104,8 @@ class Task1:
         self.title_wc = WordCount()
         self.head_line_wc = WordCount()
         self.news_data = news_data
-        
+    
+    @timer
     def run(self):
         title_idx = 1
         head_line_idx = 2
@@ -122,6 +134,90 @@ class Task1:
             self.news_data, head_line_idx
         )
 
+    def show(self):
+        print(self.title_wc.by_total.take(5))
+        print(self.title_wc.by_topic.take(4))
+        print(self.title_wc.by_date.take(4))
+        print(self.head_line_wc.by_total.take(5))
+        print(self.head_line_wc.by_topic.take(4))
+        print(self.head_line_wc.by_date.take(4))
+
+
+def cal_avg_pop(ts, n):
+    ts = list(map(lambda x: float(x), ts))
+
+    gp_n = 144 // n
+
+    avgs = []
+    for i in range(0, len(ts), gp_n):
+        avgs.append(sum(ts[i:i+gp_n]) / gp_n)
+    
+    return sum(avgs) / n
+
+
+def cal_avg_pop2(ts, n):
+    return sum(list(map(lambda x: float(x), ts))) / n
+
+
+def cal_avg_pop_by_hour(ts):
+    # return cal_avg_pop(ts, n=48)
+    return cal_avg_pop2(ts, n=48)
+
+
+def cal_avg_pop_by_day(ts):
+    # return cal_avg_pop(ts, n=2)
+    return cal_avg_pop2(ts, n=2)
+
+
+class Popularity:
+    def __init__(self):
+        self.by_hour = None
+        self.by_day = None
+
+
+class Task2:
+    def __init__(self, fb_data, gp_data, li_data):
+        self.fb_avg_pop = Popularity()
+        self.gp_avg_pop = Popularity()
+        self.li_avg_pop = Popularity()
+        self.fb_data = fb_data
+        self.gp_data = gp_data
+        self.li_data = li_data
+        
+    @timer
+    def run(self):
+        self.fb_avg_pop.by_hour = fb_data.map(
+            lambda r: (r[0], cal_avg_pop_by_hour(r[1:]))
+        )
+
+        self.fb_avg_pop.by_day = fb_data.map(
+            lambda r: (r[0], cal_avg_pop_by_day(r[1:]))
+        )
+
+        self.gp_avg_pop.by_hour = gp_data.map(
+            lambda r: (r[0], cal_avg_pop_by_hour(r[1:]))
+        )
+
+        self.gp_avg_pop.by_day = gp_data.map(
+            lambda r: (r[0], cal_avg_pop_by_day(r[1:]))
+        )
+
+        self.li_avg_pop.by_hour = li_data.map(
+            lambda r: (r[0], cal_avg_pop_by_hour(r[1:]))
+        )
+
+        self.li_avg_pop.by_day = li_data.map(
+            lambda r: (r[0], cal_avg_pop_by_day(r[1:]))
+        )
+
+    def show(self):
+        print(f'fb pop by hour: {self.fb_avg_pop.by_hour.take(4)}')
+        print(f'fb pop by day: {self.fb_avg_pop.by_day.take(4)}')
+        print(f'gp pop by hour: {self.gp_avg_pop.by_hour.take(4)}')
+        print(f'gp pop by day: {self.gp_avg_pop.by_day.take(4)}')
+        print(f'li pop by hour: {self.li_avg_pop.by_hour.take(4)}')
+        print(f'li pop by day: {self.li_avg_pop.by_day.take(4)}')
+
 
 if __name__ == '__main__':
     # init spark
@@ -133,15 +229,33 @@ if __name__ == '__main__':
     sc.setLogLevel("ERROR")
 
     # read data
-    news_file = 'hw2/data/News_Final.csv'
-    news_data = read_csv(spark, news_file)
-    
+    news_data = read_csv('hw2/data/News_Final.csv')
+
+    fb_e = read_csv('hw2/data/Facebook_Economy.csv')
+    fb_m = read_csv('hw2/data/Facebook_Microsoft.csv')
+    fb_o = read_csv('hw2/data/Facebook_Obama.csv')
+    fb_p = read_csv('hw2/data/Facebook_Palestine.csv')
+
+    gp_e = read_csv('hw2/data/GooglePlus_Economy.csv')
+    gp_m = read_csv('hw2/data/GooglePlus_Microsoft.csv')
+    gp_o = read_csv('hw2/data/GooglePlus_Obama.csv')
+    gp_p = read_csv('hw2/data/GooglePlus_Palestine.csv')
+
+    li_e = read_csv('hw2/data/LinkedIn_Economy.csv')
+    li_m = read_csv('hw2/data/LinkedIn_Microsoft.csv')
+    li_o = read_csv('hw2/data/LinkedIn_Obama.csv')
+    li_p = read_csv('hw2/data/LinkedIn_Palestine.csv')
+
+    fb_data = fb_e.union(fb_m).union(fb_o).union(fb_p)
+    gp_data = gp_e.union(gp_m).union(gp_o).union(gp_p)
+    li_data = li_e.union(li_m).union(li_o).union(li_p)
+
+    # run task1
     task1 = Task1(news_data)
     task1.run()
+    task1.show()
 
-    print(task1.title_wc.by_total.take(5))
-    print(task1.title_wc.by_topic.take(4))
-    print(task1.title_wc.by_date.take(4))
-    print(task1.head_line_wc.by_total.take(5))
-    print(task1.head_line_wc.by_topic.take(4))
-    print(task1.head_line_wc.by_date.take(4))
+    # run task2
+    task2 = Task2(fb_data, gp_data, li_data)
+    task2.run()
+    task2.show()
