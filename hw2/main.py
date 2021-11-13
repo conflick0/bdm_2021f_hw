@@ -186,27 +186,27 @@ class Task2:
         
     @timer
     def run(self):
-        self.fb_avg_pop.by_hour = fb_data.map(
+        self.fb_avg_pop.by_hour = self.fb_data.map(
             lambda r: (r[0], cal_avg_pop_by_hour(r[1:]))
         )
 
-        self.fb_avg_pop.by_day = fb_data.map(
+        self.fb_avg_pop.by_day = self.fb_data.map(
             lambda r: (r[0], cal_avg_pop_by_day(r[1:]))
         )
 
-        self.gp_avg_pop.by_hour = gp_data.map(
+        self.gp_avg_pop.by_hour = self.gp_data.map(
             lambda r: (r[0], cal_avg_pop_by_hour(r[1:]))
         )
 
-        self.gp_avg_pop.by_day = gp_data.map(
+        self.gp_avg_pop.by_day = self.gp_data.map(
             lambda r: (r[0], cal_avg_pop_by_day(r[1:]))
         )
 
-        self.li_avg_pop.by_hour = li_data.map(
+        self.li_avg_pop.by_hour = self.li_data.map(
             lambda r: (r[0], cal_avg_pop_by_hour(r[1:]))
         )
 
-        self.li_avg_pop.by_day = li_data.map(
+        self.li_avg_pop.by_day = self.li_data.map(
             lambda r: (r[0], cal_avg_pop_by_day(r[1:]))
         )
 
