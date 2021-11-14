@@ -274,6 +274,20 @@ class Task3:
         s_df.show(truncate=False)
 
 
+def build_cor_keys(data, topic_name):
+    # get top 100 words by topic
+    top_w = data\
+        .filter(lambda x: x[0] == topic_name)\
+        .map(lambda x: x[1])\
+        .take(100)
+    
+    # build cor key pair, ex [(0, a, b), (1, a, c), ...]
+    return list(map(
+        lambda x: (x[0], x[1][0], x[1][1]),
+        enumerate(combinations(top_w, 2))
+    ))
+
+
 def cal_cor(s, ks):
     s = extract_words(s)
 
@@ -283,6 +297,38 @@ def cal_cor(s, ks):
     ))
 
     return list(filter(lambda x: x[1]==1, cor))
+
+
+class Topic:
+    def __init__(self):
+        self.e = None
+        self.m = None
+        self.o = None
+        self.p = None
+
+
+class Task4:
+    def __init__(self, news_data, title_wc_topic):
+        self.news_data = news_data
+        self.title_cor = Topic()
+        self.title_wc_topic = title_wc_topic
+
+    @timer
+    def run(self):
+        t_ks_e = build_cor_keys(
+            self.title_wc_topic, 'economy'
+        )
+
+        self.title_cor.e = self.news_data\
+            .map(lambda x: cal_cor(x[1], t_ks_e))\
+            .flatMap(lambda x: x)\
+            .reduceByKey(lambda a, b: a + b)\
+            .sortBy(lambda x: x[0][0])\
+            .map(lambda x: ((x[0][1], x[0][2]), x[1]))\
+            .collect()
+
+    def show(self):
+        print(self.title_cor.e[:5])
 
 
 if __name__ == '__main__':
@@ -321,33 +367,9 @@ if __name__ == '__main__':
     task1.run()
     task1.show()
 
-    print('Test')
-    
-    top_w = task1.title_wc.by_topic\
-        .filter(lambda x: x[0] == 'economy')\
-        .map(lambda x: x[1])\
-        .take(100)
-        
-    # build cor key pair, ex [(a, b), (a, c), ...]
-    keys = list(map(
-        lambda x: (x[0], x[1][0], x[1][1]),
-        enumerate(combinations(top_w, 2))
-    ))
-
-    et = time.time()
-    cor = news_data\
-        .map(lambda x: cal_cor(x[1], keys))\
-        .flatMap(lambda x: x)\
-        .reduceByKey(lambda a, b: a + b)\
-        .sortBy(lambda x: x[0][0])\
-        .collect()
-    et = time.time()  - et 
-    print(cor)
-    print(et)
-
-    # task4 = Task4(news_data, task1.title_wc.by_topic)
-    # task4.run()
-    # task4.show()
+    task4 = Task4(news_data, task1.title_wc.by_topic)
+    task4.run()
+    task4.show()
 
 
     # # run task2
