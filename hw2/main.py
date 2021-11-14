@@ -36,7 +36,7 @@ def extract_words(s):
     if s is None: return ['']
     s = re.sub(r'[^\x00-\x7f]',r'', s)
     s = s.translate(str.maketrans('', '', string.punctuation))
-    return s.split()
+    return s.lower().split()
 
 
 def extract_words_with_key(k, v):
@@ -64,7 +64,7 @@ def count_by_topic(data, field_idx):
         .flatMap(lambda x: x)\
         .reduceByKey(lambda a, b: a + b)\
         .map(lambda x: (x[0][0], x[0][1], x[1]))\
-        .sortBy(lambda x: (ord(x[0][0]), -x[2]))\
+        .sortBy(lambda x: -x[2])\
 
 
 def count_by_date(data, field_idx):
@@ -77,7 +77,7 @@ def count_by_date(data, field_idx):
         .flatMap(lambda x: x)\
         .reduceByKey(lambda a, b: a + b)\
         .map(lambda x: (x[0][0], x[0][1], x[1]))\
-        .sortBy(lambda x: (int(x[0].replace('-', '')), -x[2]))
+        .sortBy(lambda x: -x[2])
 
 
 class WordCount:
@@ -261,6 +261,7 @@ class Task2:
                 'Facebook_avg_popularity (by hour)'
             ]
         )
+        df1.show(20)
 
         df2 = self.fb_avg_pop.by_day.toDF(
             [
@@ -268,6 +269,7 @@ class Task2:
                 'Facebook_avg_popularity (by day)'
             ]
         )
+        df2.show(20)
 
         df3 = self.gp_avg_pop.by_hour.toDF(
             [
@@ -275,6 +277,7 @@ class Task2:
                 'GooglePlus_avg_popularity (by hour)'
             ]
         )
+        df3.show(20)
 
         df4 = self.gp_avg_pop.by_day.toDF(
             [
@@ -282,6 +285,7 @@ class Task2:
                 'GooglePlus_avg_popularity (by day)'
             ]
         )
+        df4.show(20)
 
         df5 = self.li_avg_pop.by_hour.toDF(
             [
@@ -289,6 +293,7 @@ class Task2:
                 'LinkedIn_avg_popularity (by hour)'
             ]
         )
+        df5.show(20)
 
         df6 = self.li_avg_pop.by_day.toDF(
             [
@@ -296,23 +301,7 @@ class Task2:
                 'LinkedIn_avg_popularity (by day)'
             ]
         )
-
-        df1 = df1.withColumn('id', (monotonically_increasing_id()+1))
-        df2 = df2.withColumn('id', (monotonically_increasing_id()+1))
-        df3 = df3.withColumn('id', (monotonically_increasing_id()+1))
-        df4 = df4.withColumn('id', (monotonically_increasing_id()+1))
-        df5 = df5.withColumn('id', (monotonically_increasing_id()+1))
-        df6 = df6.withColumn('id', (monotonically_increasing_id()+1))
-        
-        df = df1\
-            .join(df2, on='id', how='full')\
-            .join(df3, on='id', how='full')\
-            .join(df4, on='id', how='full')\
-            .join(df5, on='id', how='full')\
-            .join(df6, on='id', how='full')
-        
-        df = df.sort('id').drop('id')
-        df.show(20, truncate=False)
+        df6.show(20)
 
 
 def cal_sum_avg_sentiment(data):
@@ -437,16 +426,19 @@ if __name__ == '__main__':
     li_data = li_e.union(li_m).union(li_o).union(li_p)
 
     # run task1
+    print('Task1')
     task1 = Task1(news_data)
     task1.run()
     task1.show()
 
     # run task2
+    print('Task2')
     task2 = Task2(fb_data, gp_data, li_data)
     task2.run()
     task2.show()
 
     # run task3
+    print('Task3')
     task3 = Task3(news_data)
     task3.run()
     task3.show()
