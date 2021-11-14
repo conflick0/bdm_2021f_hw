@@ -2,6 +2,7 @@ import re
 import string
 import time
 from functools import wraps
+from itertools import combinations
 from pyspark.sql import SparkSession
 from pyspark import SparkContext, SparkConf
 
@@ -61,14 +62,8 @@ def count_by_topic(data, field_idx):
         )\
         .flatMap(lambda x: x)\
         .reduceByKey(lambda a, b: a + b)\
-        .map(lambda x: (x[0][0], [(x[0][1], x[1])]))\
-        .reduceByKey(lambda a, b: a + b)\
-        .map(lambda x: (
-                x[0], 
-                sorted(x[1], key=lambda e: e[1], reverse=True)
-            )
-        )\
-        .map(lambda x: (x[0], x[1][:10]))
+        .map(lambda x: (x[0][0], x[0][1], x[1]))\
+        .sortBy(lambda x: (ord(x[0][0]), -x[2]))\
 
 
 def count_by_date(data, field_idx):
@@ -134,12 +129,39 @@ class Task1:
             self.news_data, head_line_idx
         )
 
+    def _take_topic(self, data, topic_name):
+        return data\
+            .filter(lambda x: x[0] == topic_name)\
+            .take(4)
+
     def show(self):
         print(self.title_wc.by_total.take(5))
-        print(self.title_wc.by_topic.take(4))
+        print(
+            self._take_topic(self.title_wc.by_topic, 'economy')
+        )
+        print(
+            self._take_topic(self.title_wc.by_topic, 'microsoft')
+        )
+        print(
+            self._take_topic(self.title_wc.by_topic, 'obama')
+        )
+        print(
+            self._take_topic(self.title_wc.by_topic, 'palestine')
+        )
         print(self.title_wc.by_date.take(4))
         print(self.head_line_wc.by_total.take(5))
-        print(self.head_line_wc.by_topic.take(4))
+        print(
+            self._take_topic(self.head_line_wc.by_topic, 'economy')
+        )
+        print(
+            self._take_topic(self.head_line_wc.by_topic, 'microsoft')
+        )
+        print(
+            self._take_topic(self.head_line_wc.by_topic, 'obama')
+        )
+        print(
+            self._take_topic(self.head_line_wc.by_topic, 'palestine')
+        )
         print(self.head_line_wc.by_date.take(4))
 
 
@@ -252,6 +274,17 @@ class Task3:
         s_df.show(truncate=False)
 
 
+def cal_cor(s, ks):
+    s = extract_words(s)
+
+    cor = list(map(
+        lambda k: (k, 1) if k[1] in s and k[2] in s else (k, 0),
+        ks
+    ))
+
+    return list(filter(lambda x: x[1]==1, cor))
+
+
 if __name__ == '__main__':
     # init spark
     conf = SparkConf().setAppName('Test')
@@ -264,36 +297,65 @@ if __name__ == '__main__':
     # read data
     news_data = read_csv('hw2/data/News_Final.csv')
 
-    fb_e = read_csv('hw2/data/Facebook_Economy.csv')
-    fb_m = read_csv('hw2/data/Facebook_Microsoft.csv')
-    fb_o = read_csv('hw2/data/Facebook_Obama.csv')
-    fb_p = read_csv('hw2/data/Facebook_Palestine.csv')
+    # fb_e = read_csv('hw2/data/Facebook_Economy.csv')
+    # fb_m = read_csv('hw2/data/Facebook_Microsoft.csv')
+    # fb_o = read_csv('hw2/data/Facebook_Obama.csv')
+    # fb_p = read_csv('hw2/data/Facebook_Palestine.csv')
 
-    gp_e = read_csv('hw2/data/GooglePlus_Economy.csv')
-    gp_m = read_csv('hw2/data/GooglePlus_Microsoft.csv')
-    gp_o = read_csv('hw2/data/GooglePlus_Obama.csv')
-    gp_p = read_csv('hw2/data/GooglePlus_Palestine.csv')
+    # gp_e = read_csv('hw2/data/GooglePlus_Economy.csv')
+    # gp_m = read_csv('hw2/data/GooglePlus_Microsoft.csv')
+    # gp_o = read_csv('hw2/data/GooglePlus_Obama.csv')
+    # gp_p = read_csv('hw2/data/GooglePlus_Palestine.csv')
 
-    li_e = read_csv('hw2/data/LinkedIn_Economy.csv')
-    li_m = read_csv('hw2/data/LinkedIn_Microsoft.csv')
-    li_o = read_csv('hw2/data/LinkedIn_Obama.csv')
-    li_p = read_csv('hw2/data/LinkedIn_Palestine.csv')
+    # li_e = read_csv('hw2/data/LinkedIn_Economy.csv')
+    # li_m = read_csv('hw2/data/LinkedIn_Microsoft.csv')
+    # li_o = read_csv('hw2/data/LinkedIn_Obama.csv')
+    # li_p = read_csv('hw2/data/LinkedIn_Palestine.csv')
 
-    fb_data = fb_e.union(fb_m).union(fb_o).union(fb_p)
-    gp_data = gp_e.union(gp_m).union(gp_o).union(gp_p)
-    li_data = li_e.union(li_m).union(li_o).union(li_p)
+    # fb_data = fb_e.union(fb_m).union(fb_o).union(fb_p)
+    # gp_data = gp_e.union(gp_m).union(gp_o).union(gp_p)
+    # li_data = li_e.union(li_m).union(li_o).union(li_p)
 
     # run task1
     task1 = Task1(news_data)
     task1.run()
     task1.show()
 
-    # run task2
-    task2 = Task2(fb_data, gp_data, li_data)
-    task2.run()
-    task2.show()
+    print('Test')
+    
+    top_w = task1.title_wc.by_topic\
+        .filter(lambda x: x[0] == 'economy')\
+        .map(lambda x: x[1])\
+        .take(100)
+        
+    # build cor key pair, ex [(a, b), (a, c), ...]
+    keys = list(map(
+        lambda x: (x[0], x[1][0], x[1][1]),
+        enumerate(combinations(top_w, 2))
+    ))
 
-    # run task3
-    task3 = Task3(news_data)
-    task3.run()
-    task3.show()
+    et = time.time()
+    cor = news_data\
+        .map(lambda x: cal_cor(x[1], keys))\
+        .flatMap(lambda x: x)\
+        .reduceByKey(lambda a, b: a + b)\
+        .sortBy(lambda x: x[0][0])\
+        .collect()
+    et = time.time()  - et 
+    print(cor)
+    print(et)
+
+    # task4 = Task4(news_data, task1.title_wc.by_topic)
+    # task4.run()
+    # task4.show()
+
+
+    # # run task2
+    # task2 = Task2(fb_data, gp_data, li_data)
+    # task2.run()
+    # task2.show()
+
+    # # run task3
+    # task3 = Task3(news_data)
+    # task3.run()
+    # task3.show()
