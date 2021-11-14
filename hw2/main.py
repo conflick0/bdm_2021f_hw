@@ -255,12 +255,64 @@ class Task2:
         )
 
     def show(self):
-        print(f'fb pop by hour: {self.fb_avg_pop.by_hour.take(4)}')
-        print(f'fb pop by day: {self.fb_avg_pop.by_day.take(4)}')
-        print(f'gp pop by hour: {self.gp_avg_pop.by_hour.take(4)}')
-        print(f'gp pop by day: {self.gp_avg_pop.by_day.take(4)}')
-        print(f'li pop by hour: {self.li_avg_pop.by_hour.take(4)}')
-        print(f'li pop by day: {self.li_avg_pop.by_day.take(4)}')
+        df1 = self.fb_avg_pop.by_hour.toDF(
+            [
+                'Facebook_news_id (by hour)',
+                'Facebook_avg_popularity (by hour)'
+            ]
+        )
+
+        df2 = self.fb_avg_pop.by_day.toDF(
+            [
+                'Facebook_news_id (by day)',
+                'Facebook_avg_popularity (by day)'
+            ]
+        )
+
+        df3 = self.gp_avg_pop.by_hour.toDF(
+            [
+                'GooglePlus_news_id (by hour)',
+                'GooglePlus_avg_popularity (by hour)'
+            ]
+        )
+
+        df4 = self.gp_avg_pop.by_day.toDF(
+            [
+                'GooglePlus_news_id (by day)',
+                'GooglePlus_avg_popularity (by day)'
+            ]
+        )
+
+        df5 = self.li_avg_pop.by_hour.toDF(
+            [
+                'LinkedIn_news_id (by hour)',
+                'LinkedIn_avg_popularity (by hour)'
+            ]
+        )
+
+        df6 = self.li_avg_pop.by_day.toDF(
+            [
+                'LinkedIn_news_id (by day)',
+                'LinkedIn_avg_popularity (by day)'
+            ]
+        )
+
+        df1 = df1.withColumn('id', (monotonically_increasing_id()+1))
+        df2 = df2.withColumn('id', (monotonically_increasing_id()+1))
+        df3 = df3.withColumn('id', (monotonically_increasing_id()+1))
+        df4 = df4.withColumn('id', (monotonically_increasing_id()+1))
+        df5 = df5.withColumn('id', (monotonically_increasing_id()+1))
+        df6 = df6.withColumn('id', (monotonically_increasing_id()+1))
+        
+        df = df1\
+            .join(df2, on='id', how='full')\
+            .join(df3, on='id', how='full')\
+            .join(df4, on='id', how='full')\
+            .join(df5, on='id', how='full')\
+            .join(df6, on='id', how='full')
+        
+        df = df.sort('id').drop('id')
+        df.show(20, truncate=False)
 
 
 def cal_sum_avg_sentiment(data):
@@ -365,39 +417,39 @@ if __name__ == '__main__':
     # read data
     news_data = read_csv('hw2/data/News_Final.csv')
 
-    # fb_e = read_csv('hw2/data/Facebook_Economy.csv')
-    # fb_m = read_csv('hw2/data/Facebook_Microsoft.csv')
-    # fb_o = read_csv('hw2/data/Facebook_Obama.csv')
-    # fb_p = read_csv('hw2/data/Facebook_Palestine.csv')
+    fb_e = read_csv('hw2/data/Facebook_Economy.csv')
+    fb_m = read_csv('hw2/data/Facebook_Microsoft.csv')
+    fb_o = read_csv('hw2/data/Facebook_Obama.csv')
+    fb_p = read_csv('hw2/data/Facebook_Palestine.csv')
 
-    # gp_e = read_csv('hw2/data/GooglePlus_Economy.csv')
-    # gp_m = read_csv('hw2/data/GooglePlus_Microsoft.csv')
-    # gp_o = read_csv('hw2/data/GooglePlus_Obama.csv')
-    # gp_p = read_csv('hw2/data/GooglePlus_Palestine.csv')
+    gp_e = read_csv('hw2/data/GooglePlus_Economy.csv')
+    gp_m = read_csv('hw2/data/GooglePlus_Microsoft.csv')
+    gp_o = read_csv('hw2/data/GooglePlus_Obama.csv')
+    gp_p = read_csv('hw2/data/GooglePlus_Palestine.csv')
 
-    # li_e = read_csv('hw2/data/LinkedIn_Economy.csv')
-    # li_m = read_csv('hw2/data/LinkedIn_Microsoft.csv')
-    # li_o = read_csv('hw2/data/LinkedIn_Obama.csv')
-    # li_p = read_csv('hw2/data/LinkedIn_Palestine.csv')
+    li_e = read_csv('hw2/data/LinkedIn_Economy.csv')
+    li_m = read_csv('hw2/data/LinkedIn_Microsoft.csv')
+    li_o = read_csv('hw2/data/LinkedIn_Obama.csv')
+    li_p = read_csv('hw2/data/LinkedIn_Palestine.csv')
 
-    # fb_data = fb_e.union(fb_m).union(fb_o).union(fb_p)
-    # gp_data = gp_e.union(gp_m).union(gp_o).union(gp_p)
-    # li_data = li_e.union(li_m).union(li_o).union(li_p)
+    fb_data = fb_e.union(fb_m).union(fb_o).union(fb_p)
+    gp_data = gp_e.union(gp_m).union(gp_o).union(gp_p)
+    li_data = li_e.union(li_m).union(li_o).union(li_p)
 
     # run task1
     task1 = Task1(news_data)
     task1.run()
     task1.show()
 
-    # # run task2
-    # task2 = Task2(fb_data, gp_data, li_data)
-    # task2.run()
-    # task2.show()
+    # run task2
+    task2 = Task2(fb_data, gp_data, li_data)
+    task2.run()
+    task2.show()
 
-    # # run task3
-    # task3 = Task3(news_data)
-    # task3.run()
-    # task3.show()
+    # run task3
+    task3 = Task3(news_data)
+    task3.run()
+    task3.show()
 
     # run task4
     # task4 = Task4(news_data, task1.title_wc.by_topic)
