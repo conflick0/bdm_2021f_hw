@@ -186,6 +186,15 @@ class Task1:
         df = df.sort('id').drop('id')
         df.show(20, truncate=False)
 
+        # save file
+        print('save file ...')
+        out_df = df.coalesce(1)
+        out_df.write.csv(
+            'hw2/output/task1', 
+            mode='overwrite',
+            header=True
+        )
+
 
 def cal_avg_pop(ts, n):
     ts = list(map(lambda x: float(x), ts))
@@ -303,6 +312,50 @@ class Task2:
         )
         df6.show(20)
 
+        # save file
+        print('save file ...')
+        out_df = df1.coalesce(1)
+        out_df.write.csv(
+            'hw2/output/task2_Facebook_avg_popularity_by_hour', 
+            mode='overwrite',
+            header=True
+        )
+
+        out_df = df2.coalesce(1)
+        out_df.write.csv(
+            'hw2/output/task2_Facebook_avg_popularity_by_day', 
+            mode='overwrite',
+            header=True
+        )
+
+        out_df = df3.coalesce(1)
+        out_df.write.csv(
+            'hw2/output/task2_GooglePlus_avg_popularity_by_hour', 
+            mode='overwrite',
+            header=True
+        )
+
+        out_df = df4.coalesce(1)
+        out_df.write.csv(
+            'hw2/output/task2_GooglePlus_avg_popularity_by_day', 
+            mode='overwrite',
+            header=True
+        )
+
+        out_df = df5.coalesce(1)
+        out_df.write.csv(
+            'hw2/output/task2_LinkedIn_avg_popularity_by_hour', 
+            mode='overwrite',
+            header=True
+        )
+
+        out_df = df6.coalesce(1)
+        out_df.write.csv(
+            'hw2/output/task2_LinkedIn_avg_popularity_by_day', 
+            mode='overwrite',
+            header=True
+        )
+
 
 def cal_sum_avg_sentiment(data):
     return data\
@@ -335,6 +388,14 @@ class Task3:
         col_names = ['type', 'topic', 'sum', 'avg']
         s_df = self.sentiment.toDF(col_names)
         s_df.show(truncate=False)
+
+        print('save file ...')
+        out_df = s_df.coalesce(1)
+        out_df.write.csv(
+            'hw2/output/task3', 
+            mode='overwrite',
+            header=True
+        )
 
 
 def build_cor_keys(data, topic_name):
