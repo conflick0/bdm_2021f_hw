@@ -4,6 +4,7 @@ import time
 from functools import wraps
 from itertools import combinations
 from pyspark.sql import SparkSession
+from pyspark.sql.functions import monotonically_increasing_id
 from pyspark import SparkContext, SparkConf
 
 
@@ -75,16 +76,8 @@ def count_by_date(data, field_idx):
         )\
         .flatMap(lambda x: x)\
         .reduceByKey(lambda a, b: a + b)\
-        .sortBy(lambda x: x[1], False)\
-        .map(lambda x: (x[0][0], [(x[0][1], x[1])]))\
-        .reduceByKey(lambda a, b: a + b)\
-        .map(lambda x: (
-                x[0], 
-                sorted(x[1], key=lambda e: e[1], reverse=True)
-            )
-        )\
-        .sortBy(lambda x: int(x[0].replace('-', '')))\
-        .map(lambda x: (x[0], x[1][:10]))\
+        .map(lambda x: (x[0][0], x[0][1], x[1]))\
+        .sortBy(lambda x: (int(x[0].replace('-', '')), -x[2]))
 
 
 class WordCount:
@@ -129,40 +122,69 @@ class Task1:
             self.news_data, head_line_idx
         )
 
-    def _take_topic(self, data, topic_name):
-        return data\
-            .filter(lambda x: x[0] == topic_name)\
-            .take(4)
-
     def show(self):
-        print(self.title_wc.by_total.take(5))
-        print(
-            self._take_topic(self.title_wc.by_topic, 'economy')
+        df1 = self.title_wc.by_total.toDF(
+            [
+                'title_word (total)',
+                'title_count (total)'
+            ]
         )
-        print(
-            self._take_topic(self.title_wc.by_topic, 'microsoft')
+
+        df2 = self.head_line_wc.by_total.toDF(
+            [
+                'head_line_word (total)',
+                'head_line_count (total)'
+            ]
         )
-        print(
-            self._take_topic(self.title_wc.by_topic, 'obama')
+
+        df3 = self.title_wc.by_topic.toDF(
+            [
+                'title_topic (by topic)',
+                'title_word (by topic)',
+                'title_count (by topic)'
+            ]
         )
-        print(
-            self._take_topic(self.title_wc.by_topic, 'palestine')
+
+        df4 = self.head_line_wc.by_topic.toDF(
+            [
+                'head_line_topic (by topic)',
+                'head_line_word (by topic)',
+                'head_line_count (by topic)'
+            ]
         )
-        print(self.title_wc.by_date.take(4))
-        print(self.head_line_wc.by_total.take(5))
-        print(
-            self._take_topic(self.head_line_wc.by_topic, 'economy')
+
+        df5 = self.title_wc.by_date.toDF(
+            [
+                'title_date (by date)',
+                'title_word (by date)',
+                'title_count (by date)'
+            ]
         )
-        print(
-            self._take_topic(self.head_line_wc.by_topic, 'microsoft')
+
+        df6 = self.head_line_wc.by_date.toDF(
+            [
+                'head_line_date (by date)',
+                'head_line_word (by date)',
+                'head_line_count (by date)'
+            ]
         )
-        print(
-            self._take_topic(self.head_line_wc.by_topic, 'obama')
-        )
-        print(
-            self._take_topic(self.head_line_wc.by_topic, 'palestine')
-        )
-        print(self.head_line_wc.by_date.take(4))
+
+        df1 = df1.withColumn('id', (monotonically_increasing_id()+1))
+        df2 = df2.withColumn('id', (monotonically_increasing_id()+1))
+        df3 = df3.withColumn('id', (monotonically_increasing_id()+1))
+        df4 = df4.withColumn('id', (monotonically_increasing_id()+1))
+        df5 = df5.withColumn('id', (monotonically_increasing_id()+1))
+        df6 = df6.withColumn('id', (monotonically_increasing_id()+1))
+        
+        df = df1\
+            .join(df2, on='id', how='full')\
+            .join(df3, on='id', how='full')\
+            .join(df4, on='id', how='full')\
+            .join(df5, on='id', how='full')\
+            .join(df6, on='id', how='full')
+        
+        df = df.sort('id').drop('id')
+        df.show(20, truncate=False)
 
 
 def cal_avg_pop(ts, n):
@@ -367,11 +389,6 @@ if __name__ == '__main__':
     task1.run()
     task1.show()
 
-    task4 = Task4(news_data, task1.title_wc.by_topic)
-    task4.run()
-    task4.show()
-
-
     # # run task2
     # task2 = Task2(fb_data, gp_data, li_data)
     # task2.run()
@@ -381,3 +398,8 @@ if __name__ == '__main__':
     # task3 = Task3(news_data)
     # task3.run()
     # task3.show()
+
+    # run task4
+    # task4 = Task4(news_data, task1.title_wc.by_topic)
+    # task4.run()
+    # task4.show()
