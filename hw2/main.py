@@ -457,7 +457,7 @@ class Task4:
 
 if __name__ == '__main__':
     # init spark
-    conf = SparkConf().setAppName('Test')
+    conf = SparkConf().setAppName('hw2').setMaster('spark://spark-1:7077')
     sc = SparkContext(conf=conf)
     spark = SparkSession(sc)
 
