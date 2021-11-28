@@ -2,6 +2,7 @@ import re
 import string
 import time
 from functools import wraps
+from itertools import zip_longest
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import monotonically_increasing_id
 from pyspark import SparkContext, SparkConf
@@ -47,6 +48,40 @@ def build_shingles(s, k):
     return list(set([tuple(s[i:(i+k)]) for i in range(len(s) - k + 1)]))
 
 
+class Task1:
+    def __init__(self):
+        self.shingles = None
+    
+    @timer
+    def cal_shingles(self, docs, k):
+        self.shingles = docs\
+            .map(lambda x: extract_words(x))\
+            .map(lambda x: build_shingles(x, k))
+
+    def save(self):
+        # to df for save file
+        out_ls = list(
+            zip_longest(*self.shingles.collect(), fillvalue='')
+        )
+
+        header = [f'doc_{i+1}' for i in range(len(out_ls[0]))]
+
+        # df = sc.parallelize(out_ls).toDF()
+
+        # df = sc.parallelize(out_ls).toDF(
+        #     [f'doc_{i+1}' for i in range(len(out_ls[0]))]
+        # )
+
+        # df.show(1, truncate=False, vertical=True)
+
+        # out_df =  df.coalesce(1)
+        # out_df.write.csv(
+        #     'hw3/output/task1', 
+        #     mode='overwrite',
+        #     header=True
+        # )
+
+
 if __name__ == '__main__':
     # init spark
     conf = SparkConf()\
@@ -59,14 +94,14 @@ if __name__ == '__main__':
     # set log only error
     sc.setLogLevel("ERROR")
 
+    # set file paths
     file_paths = [f'hw3/data/reut2-{i:03}.sgm' for i in range(0, 22)]
 
+    # read docs
     docs = read_docs(file_paths)
-    
     docs = sc.parallelize(docs)
 
-    doc_shingles = docs\
-        .map(lambda x: extract_words(x))\
-        .map(lambda x: build_shingles(x, k=8))
-
-    print(doc_shingles.take(1))
+    # task1
+    task1 = Task1()
+    task1.cal_shingles(docs, k=8)
+    task1.save()
