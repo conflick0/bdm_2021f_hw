@@ -43,9 +43,25 @@ def extract_words(s):
     return s.lower().split()
 
 
-def build_shingles(s, k):
+def build_shingles(x, k):
     '''return shingle set from doc'''
-    return list(set([tuple(s[i:(i+k)]) for i in range(len(s) - k + 1)]))
+    s = x[1]
+    ls = list(set([tuple(s[i:(i+k)]) for i in range(len(s) - k + 1)]))
+    return list(map(lambda e: (e, x[0]), ls))
+
+
+def build_shingle_vector(x, num_doc):
+    '''
+    return row shingle vector (shingle, [0,0,1, ...])
+    if shingle exist in doc set 1 else 0
+    '''
+    vector = [0 for _ in range(num_doc)]
+    shingle, doc_idxs = x
+
+    for i in doc_idxs:
+        vector[i] = 1
+
+    return (shingle, vector)
 
 
 class Task1:
@@ -53,33 +69,36 @@ class Task1:
         self.shingles = None
     
     @timer
-    def cal_shingles(self, docs, k):
+    def run(self, docs, k):
+        print('task1 running ...')
+
+        num_doc = docs.count()
+
         self.shingles = docs\
-            .map(lambda x: extract_words(x))\
-            .map(lambda x: build_shingles(x, k))
+            .zipWithIndex()\
+            .map(lambda x: (x[1], extract_words(x[0])))\
+            .flatMap(lambda x: build_shingles(x, k))\
+            .groupByKey()\
+            .map(lambda x: build_shingle_vector(x, num_doc))
+        
+        self._save(num_doc)
 
-    def save(self):
-        # to df for save file
-        out_ls = list(
-            zip_longest(*self.shingles.collect(), fillvalue='')
+    def _save(self, num_doc):
+        print('task1 saving ...')
+
+        # to output df
+        hd = ['shingle'] + [f'doc_{i+1}' for i in range(num_doc)]
+        df = self.shingles\
+            .map(lambda x: ([str(x[0])] + x[1]))\
+            .toDF(hd)
+
+        # save file
+        out_df = df.coalesce(1)
+        out_df.write.csv(
+            'hw3/output/task1', 
+            mode='overwrite',
+            header=True
         )
-
-        header = [f'doc_{i+1}' for i in range(len(out_ls[0]))]
-
-        # df = sc.parallelize(out_ls).toDF()
-
-        # df = sc.parallelize(out_ls).toDF(
-        #     [f'doc_{i+1}' for i in range(len(out_ls[0]))]
-        # )
-
-        # df.show(1, truncate=False, vertical=True)
-
-        # out_df =  df.coalesce(1)
-        # out_df.write.csv(
-        #     'hw3/output/task1', 
-        #     mode='overwrite',
-        #     header=True
-        # )
 
 
 if __name__ == '__main__':
@@ -103,5 +122,4 @@ if __name__ == '__main__':
 
     # task1
     task1 = Task1()
-    task1.cal_shingles(docs, k=8)
-    task1.save()
+    task1.run(docs, k=20)
