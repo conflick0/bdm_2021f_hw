@@ -81,7 +81,8 @@ class Task1:
             .groupByKey()\
             .map(lambda x: build_shingle_vector(x, num_doc))
 
-        # self._save(num_doc)
+        print('task1 output ...')
+        print(self.shingles.take(1))
 
     def _save(self, num_doc):
         print('task1 saving ...')
@@ -157,7 +158,8 @@ class Task2:
             .groupByKey()\
             .map(lambda x: list(x[1]))
 
-        self._save(num_doc)
+        print('task2 output ...')
+        print(self.sig_mat.take(1))
         
 
     def _save(self, num_doc):
@@ -165,12 +167,12 @@ class Task2:
         df = self.sig_mat.toDF(hd)
         df.select(df.columns[:3]).show(3)
 
-        # out_df = df.coalesce(1)
-        # out_df.write.csv(
-        #     'hw3/output/task2', 
-        #     mode='overwrite',
-        #     header=True
-        # )
+        out_df = df.coalesce(1)
+        out_df.write.csv(
+            'hw3/output/task2', 
+            mode='overwrite',
+            header=True
+        )
 
 
 if __name__ == '__main__':
@@ -185,7 +187,7 @@ if __name__ == '__main__':
     # set log only error
     sc.setLogLevel("ERROR")
 
-    # set file paths
+    # set file paths (22 files)
     file_paths = [f'hw3/data/reut2-{i:03}.sgm' for i in range(0, 22)]
 
     # read docs
@@ -195,8 +197,8 @@ if __name__ == '__main__':
 
     # task1
     task1 = Task1()
-    task1.run(docs, k=10)
+    task1.run(docs, k=20)
 
     # task2
     task2 = Task2()
-    task2.run(task1.shingles, num_doc, num_h=3)
+    task2.run(task1.shingles, num_doc, num_h=2)
