@@ -1,8 +1,11 @@
 import re
 import string
 import time
+import math
+from collections import defaultdict
+from collections.abc import Iterable
 from functools import wraps
-from itertools import zip_longest
+from itertools import combinations
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import monotonically_increasing_id
 from pyspark import SparkContext, SparkConf
@@ -79,10 +82,11 @@ class Task1:
             .map(lambda x: (x[1], extract_words(x[0])))\
             .flatMap(lambda x: build_shingles(x, k))\
             .groupByKey()\
-            .map(lambda x: build_shingle_vector(x, num_doc))
+            .map(lambda x: build_shingle_vector(x, num_doc))\
+            .sortBy(lambda x: x[0][0])
 
-        print('task1 output ...')
-        print(self.shingles.take(1))
+        # print('task1 output ...')
+        # print(self.shingles.take(1))
 
     def _save(self, num_doc):
         print('task1 saving ...')
@@ -93,15 +97,15 @@ class Task1:
             .map(lambda x: ([str(x[0])] + x[1]))\
             .toDF(hd)
 
-        df.show()
+        df.select(df.columns[:3]).show(3)
 
         # save file
-        out_df = df.coalesce(1)
-        out_df.write.csv(
-            'hw3/output/task1', 
-            mode='overwrite',
-            header=True
-        )
+        # out_df = df.coalesce(1)
+        # out_df.write.csv(
+        #     'hw3/output/task1', 
+        #     mode='overwrite',
+        #     header=True
+        # )
 
 
 def create_hash_funcs(n):
@@ -158,21 +162,63 @@ class Task2:
             .groupByKey()\
             .map(lambda x: list(x[1]))
 
-        print('task2 output ...')
-        print(self.sig_mat.take(1))
-        
+        # print('task2 output ...')
+        # print(self.sig_mat.take(1))
 
     def _save(self, num_doc):
+        print('task2 saving ...')
         hd = [f'doc_{i}' for i in range(num_doc)]
         df = self.sig_mat.toDF(hd)
         df.select(df.columns[:3]).show(3)
 
-        out_df = df.coalesce(1)
-        out_df.write.csv(
-            'hw3/output/task2', 
-            mode='overwrite',
-            header=True
-        )
+        # out_df = df.coalesce(1)
+        # out_df.write.csv(
+        #     'hw3/output/task2', 
+        #     mode='overwrite',
+        #     header=True
+        # )
+
+
+def hash_band(band_id, band_vals):
+    '''return hash band vals [(b1,v1,d1), ..., (bn,vn,dn)]'''
+    return [
+        ((band_id, hash(col)), i) for i, col in enumerate(band_vals)
+    ]
+
+
+def group_pair(doc_ids):
+    '''
+    return e.g. [((d1,d2), 1), (d1,d3), 1), (d2,d3), 1)]
+    doc id pair as key
+    1 as count
+    '''
+    return list(
+        map(lambda x: (x, 1), combinations(doc_ids, 2))
+    )
+
+
+class Task3:
+    def __init__(self):
+        self.candidate_pairs = None
+    
+    @timer
+    def run(self, sig_mat, r):
+        print('task3 running ...')
+
+        self.candidate_pairs = sig_mat\
+            .zipWithIndex()\
+            .map(lambda x: (math.floor(x[1]/r), x[0]))\
+            .reduceByKey(lambda a, b: list(zip(a, b)))\
+            .flatMap(lambda x: hash_band(x[0], x[1]))\
+            .groupByKey()\
+            .map(lambda x: list(x[1]))\
+            # .filter(lambda x: len(x) > 1)\
+            # .flatMap(lambda x: group_pair(x))\
+            # .reduceByKey(lambda a, b: a + b)\
+            # .filter(lambda x: x[1] > 1)\
+            # .map(lambda x: x[0])
+        
+        print(self.candidate_pairs.collect())
 
 
 if __name__ == '__main__':
@@ -191,14 +237,18 @@ if __name__ == '__main__':
     file_paths = [f'hw3/data/reut2-{i:03}.sgm' for i in range(0, 22)]
 
     # read docs
-    docs = read_docs(file_paths)
+    docs = read_docs(file_paths)[:3]
     num_doc = len(docs)
     docs = sc.parallelize(docs)
 
-    # task1
+    # task1 k=20
     task1 = Task1()
-    task1.run(docs, k=20)
+    task1.run(docs, k=3)
 
-    # task2
+    # task2 h=2
     task2 = Task2()
-    task2.run(task1.shingles, num_doc, num_h=2)
+    task2.run(task1.shingles, num_doc, num_h=7)
+
+    # task3
+    task3 = Task3()
+    task3.run(task2.sig_mat, r=2)
