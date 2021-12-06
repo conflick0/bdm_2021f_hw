@@ -83,25 +83,23 @@ class Task1:
             .flatMap(lambda x: build_shingles(x, k))\
             .groupByKey()\
             .map(lambda x: build_shingle_vector(x, num_doc))\
-            .sortBy(lambda x: x[0][0])
+            .sortBy(lambda x: hash(x[0]))
 
-        # print('task1 output ...')
-        # print(self.shingles.take(1))
+        print('task1 output ...')
+        print(self.shingles.take(1))
 
-    def _save(self, num_doc):
+    def save(self, num_doc):
         print('task1 saving ...')
+        # # to output df
+        # hd = ['shingle'] + [f'doc_{i+1}' for i in range(num_doc)]
+        # df = self.shingles\
+        #     .map(lambda x: ([str(x[0])] + x[1]))\
+        #     .toDF(hd)
 
-        # to output df
-        hd = ['shingle'] + [f'doc_{i+1}' for i in range(num_doc)]
-        df = self.shingles\
-            .map(lambda x: ([str(x[0])] + x[1]))\
-            .toDF(hd)
+        # # df.select(df.columns[:3]).show(3)
 
-        df.select(df.columns[:3]).show(3)
-
-        # save file
-        # out_df = df.coalesce(1)
-        # out_df.write.csv(
+        # # save file
+        # df.write.csv(
         #     'hw3/output/task1', 
         #     mode='overwrite',
         #     header=True
@@ -142,6 +140,12 @@ def build_hash_doc_list(row_idx, docs, hs):
     return ls
 
 
+def sort_by_doc_id(ls):
+    return list(
+        map(lambda x: x[1], sorted(ls, key=lambda e: e[0]))
+    )
+
+
 class Task2:
     def __init__(self):
         self.sig_mat = None
@@ -158,21 +162,22 @@ class Task2:
             .map(lambda x: x[0])\
             .reduceByKey(lambda a, b: a if a < b else b)\
             .sortBy(lambda x: (x[0][0], x[0][1]))\
-            .map(lambda x: (x[0][0], x[1]))\
+            .map(lambda x: (x[0][0], (x[0][1], x[1])))\
             .groupByKey()\
-            .map(lambda x: list(x[1]))
+            .sortBy(lambda x: x[0])\
+            .map(lambda x: sort_by_doc_id(list(x[1])))
 
-        # print('task2 output ...')
-        # print(self.sig_mat.take(1))
+        print('task2 output ...')
+        print(self.sig_mat.take(1))
 
-    def _save(self, num_doc):
+    def save(self, num_doc):
         print('task2 saving ...')
-        hd = [f'doc_{i}' for i in range(num_doc)]
-        df = self.sig_mat.toDF(hd)
-        df.select(df.columns[:3]).show(3)
+        # hd = [f'doc_{i}' for i in range(num_doc)]
+        # df = self.sig_mat.toDF(hd)
 
-        # out_df = df.coalesce(1)
-        # out_df.write.csv(
+        # # df.select(df.columns[:3]).show(3)
+
+        # df.write.csv(
         #     'hw3/output/task2', 
         #     mode='overwrite',
         #     header=True
@@ -193,7 +198,7 @@ def group_pair(doc_ids):
     1 as count
     '''
     return list(
-        map(lambda x: (x, 1), combinations(doc_ids, 2))
+        map(lambda x: (x, 1), combinations(sorted(doc_ids), 2))
     )
 
 
@@ -212,13 +217,29 @@ class Task3:
             .flatMap(lambda x: hash_band(x[0], x[1]))\
             .groupByKey()\
             .map(lambda x: list(x[1]))\
-            # .filter(lambda x: len(x) > 1)\
-            # .flatMap(lambda x: group_pair(x))\
-            # .reduceByKey(lambda a, b: a + b)\
-            # .filter(lambda x: x[1] > 1)\
-            # .map(lambda x: x[0])
+            .filter(lambda x: len(x) > 1)\
+            .flatMap(lambda x: group_pair(x))\
+            .reduceByKey(lambda a, b: a + b)\
+            .filter(lambda x: x[1] > 1)\
+            .map(lambda x: x[0])
         
+        print('task3 output ...')
+        print(self.candidate_pairs.take(5))
+        print('task3 output all ...')
         print(self.candidate_pairs.collect())
+
+    def save():
+        print('task3 saving ...')
+        # df = self.sig_mat.toDF(['candidate_pair'])
+        
+        # # df.show(3)
+
+        # df.write.csv(
+        #     'hw3/output/task3', 
+        #     mode='overwrite',
+        #     header=True
+        # )
+
 
 
 if __name__ == '__main__':
@@ -237,7 +258,7 @@ if __name__ == '__main__':
     file_paths = [f'hw3/data/reut2-{i:03}.sgm' for i in range(0, 22)]
 
     # read docs
-    docs = read_docs(file_paths)[:3]
+    docs = read_docs(file_paths)
     num_doc = len(docs)
     docs = sc.parallelize(docs)
 
@@ -247,8 +268,13 @@ if __name__ == '__main__':
 
     # task2 h=2
     task2 = Task2()
-    task2.run(task1.shingles, num_doc, num_h=7)
+    task2.run(task1.shingles, num_doc, num_h=8)
 
     # task3
     task3 = Task3()
     task3.run(task2.sig_mat, r=2)
+
+    # save
+    # task1.save(num_doc)
+    # task2.save(num_doc)
+    # task3.save()
