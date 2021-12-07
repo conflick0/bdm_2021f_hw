@@ -83,10 +83,10 @@ class Task1:
             .flatMap(lambda x: build_shingles(x, k))\
             .groupByKey()\
             .map(lambda x: build_shingle_vector(x, num_doc))\
-            .sortBy(lambda x: hash(x[0]))
+            # .sortBy(lambda x: hash(x[0]))
 
-        print('task1 output ...')
-        print(self.shingles.take(1))
+        # print('task1 output ...')
+        # print(self.shingles.take(1))
 
     def save(self, num_doc):
         print('task1 saving ...')
@@ -122,9 +122,12 @@ def create_hash_funcs(n):
 
 def build_hash_doc_list(row_idx, docs, hs):
     '''return ((hash_f_id, doc_id), hash_val)'''
-    doc_ids = list(filter(
-        lambda x: x is not None,
-        map(lambda x : x[0] if x[1] == 1 else None, enumerate(docs))
+    doc_ids = list(map(
+        lambda x: x[0],
+        list(filter(
+            lambda x: x[1] == 1,
+            enumerate(docs)
+        ))
     ))
 
     ls = list(map(
@@ -161,14 +164,13 @@ class Task2:
             .flatMap(lambda x: build_hash_doc_list(x[1], x[0], hs))\
             .map(lambda x: x[0])\
             .reduceByKey(lambda a, b: a if a < b else b)\
-            .sortBy(lambda x: (x[0][0], x[0][1]))\
             .map(lambda x: (x[0][0], (x[0][1], x[1])))\
             .groupByKey()\
             .sortBy(lambda x: x[0])\
             .map(lambda x: sort_by_doc_id(list(x[1])))
 
-        print('task2 output ...')
-        print(self.sig_mat.take(1))
+        # print('task2 output ...')
+        # print(self.sig_mat.take(1))
 
     def save(self, num_doc):
         print('task2 saving ...')
@@ -224,8 +226,6 @@ class Task3:
             .map(lambda x: x[0])
         
         print('task3 output ...')
-        print(self.candidate_pairs.take(5))
-        print('task3 output all ...')
         print(self.candidate_pairs.collect())
 
     def save():
