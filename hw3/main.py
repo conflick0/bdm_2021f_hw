@@ -255,7 +255,10 @@ if __name__ == '__main__':
     sc.setLogLevel("ERROR")
 
     # set file paths (22 files)
-    file_paths = [f'hw3/data/reut2-{i:03}.sgm' for i in range(0, 22)]
+    num_files = 3
+    file_paths = [
+        f'hw3/data/reut2-{i:03}.sgm' for i in range(0, num_files)
+    ]
 
     # read docs
     docs = read_docs(file_paths)
@@ -264,7 +267,7 @@ if __name__ == '__main__':
 
     # task1 k=20
     task1 = Task1()
-    task1.run(docs, k=20)
+    task1.run(docs, k=3)
 
     # task2 h=2
     task2 = Task2()
