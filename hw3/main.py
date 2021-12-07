@@ -85,8 +85,8 @@ class Task1:
             .map(lambda x: build_shingle_vector(x, num_doc))\
             # .sortBy(lambda x: hash(x[0]))
 
-        # print('task1 output ...')
-        # print(self.shingles.take(1))
+        print('task1 output ...')
+        print(self.shingles.take(1))
 
     def save(self, num_doc):
         print('task1 saving ...')
@@ -169,8 +169,8 @@ class Task2:
             .sortBy(lambda x: x[0])\
             .map(lambda x: sort_by_doc_id(list(x[1])))
 
-        # print('task2 output ...')
-        # print(self.sig_mat.take(1))
+        print('task2 output ...')
+        print(self.sig_mat.take(1))
 
     def save(self, num_doc):
         print('task2 saving ...')
@@ -264,11 +264,11 @@ if __name__ == '__main__':
 
     # task1 k=20
     task1 = Task1()
-    task1.run(docs, k=3)
+    task1.run(docs, k=20)
 
     # task2 h=2
     task2 = Task2()
-    task2.run(task1.shingles, num_doc, num_h=8)
+    task2.run(task1.shingles, num_doc, num_h=4)
 
     # task3
     task3 = Task3()
