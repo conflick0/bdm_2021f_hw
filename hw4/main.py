@@ -26,31 +26,39 @@ def read_file(file_path):
 
 
 @timer
-def task1(ratings):
+def task1(movies, ratings):
     '''
     sorted in descending order of average rating score
     '''
     print('task1 running ...')
 
+    movies = movies\
+        .map(lambda x: (x[0], x[1]))
+
     ratings = ratings\
         .map(lambda x: (x[1], (float(x[2]), 1)))\
         .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
         .mapValues(lambda x: x[0] / x[1])\
-        .sortBy(lambda x: (x[1], int(x[0])), False)
+        .join(movies)\
+        .sortBy(lambda x: (x[1][0], int(x[0])), False)\
+        .map(lambda x: (x[1][1], x[1][0]))
 
     print('task1 output ...')
 
     df = ratings.toDF(['movie', 'score'])
-    df.show(20)
+    df.show(20, False)
 
 
 @timer
-def task2(ratings, users):
+def task2(movies, ratings, users):
     '''
     sorted in descending order of average rating score 
     grouped by gender, by age group, and by occupation
     '''
     print('task2 running ...')
+
+    movies = movies\
+        .map(lambda x: (x[0], x[1]))
 
     ratings = ratings\
         .map(lambda x: ((x[0], (x[1], float(x[2])))))
@@ -64,22 +72,30 @@ def task2(ratings, users):
         .map(lambda x: ((x[1][0][0], x[1][1][0]), (x[1][0][1], 1)))\
         .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
         .mapValues(lambda x: x[0] / x[1])\
-        .map(lambda x: (x[0][0], x[0][1], x[1]))\
-        .sortBy(lambda x: (x[2], int(x[0])), False)
+        .map(lambda x: (x[0][0], (x[0][1], x[1])))\
+        .join(movies)\
+        .sortBy(lambda x: (x[1][0][1], int(x[0])), False)\
+        .map(lambda x: (x[1][1], x[1][0][0], x[1][0][1]))
 
     age_gp = data\
         .map(lambda x: ((x[1][0][0], x[1][1][1]), (x[1][0][1], 1)))\
         .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
         .mapValues(lambda x: x[0] / x[1])\
-        .map(lambda x: (x[0][0], x[0][1], x[1]))\
-        .sortBy(lambda x: (x[2], int(x[0])), False)
+        .map(lambda x: (x[0][0], (x[0][1], x[1])))\
+        .join(movies)\
+        .sortBy(lambda x: (x[1][0][1], int(x[0])), False)\
+        .map(lambda x: (x[1][1], x[1][0][0], x[1][0][1]))
+
 
     ocp_gp = data\
         .map(lambda x: ((x[1][0][0], x[1][1][2]), (x[1][0][1], 1)))\
         .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
         .mapValues(lambda x: x[0] / x[1])\
-        .map(lambda x: (x[0][0], x[0][1], x[1]))\
-        .sortBy(lambda x: (x[2], int(x[0])), False)
+        .map(lambda x: (x[0][0], (x[0][1], x[1])))\
+        .join(movies)\
+        .sortBy(lambda x: (x[1][0][1], int(x[0])), False)\
+        .map(lambda x: (x[1][1], x[1][0][0], x[1][0][1]))
+
 
     print('task2 output ...')
 
@@ -87,9 +103,9 @@ def task2(ratings, users):
     age_df = age_gp.toDF(['movie', 'age', 'score'])
     ocp_df = ocp_gp.toDF(['movie', 'occupation', 'score'])
 
-    gd_df.show(20)
-    age_df.show(20)
-    ocp_df.show(20)
+    gd_df.show(20, False)
+    age_df.show(20, False)
+    ocp_df.show(20, False)
 
 
 if __name__ == '__main__':
@@ -110,9 +126,10 @@ if __name__ == '__main__':
     # read file
     ratings = read_file('hw4/data/ratings.dat')
     users = read_file('hw4/data/users.dat')
+    movies = read_file('hw4/data/movies.dat')
 
     # task1
-    task1(ratings)
+    task1(movies, ratings)
 
     # task2
-    task2(ratings, users)
+    task2(movies, ratings, users)
