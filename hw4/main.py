@@ -53,7 +53,7 @@ def task2(ratings, users):
     print('task2 running ...')
 
     ratings = ratings\
-        .map(lambda x: (x[1], float(x[2])))
+        .map(lambda x: ((x[0], (x[1], float(x[2])))))
 
     users = users\
         .map(lambda x: (x[0], (x[1], x[2], x[3])))
@@ -61,21 +61,21 @@ def task2(ratings, users):
     data = ratings.join(users)
 
     gd_gp = data\
-        .map(lambda x: ((x[0], x[1][1][0]), (x[1][0], 1)))\
+        .map(lambda x: ((x[1][0][0], x[1][1][0]), (x[1][0][1], 1)))\
         .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
         .mapValues(lambda x: x[0] / x[1])\
         .map(lambda x: (x[0][0], x[0][1], x[1]))\
         .sortBy(lambda x: (x[2], int(x[0])), False)
 
     age_gp = data\
-        .map(lambda x: ((x[0], x[1][1][1]), (x[1][0], 1)))\
+        .map(lambda x: ((x[1][0][0], x[1][1][1]), (x[1][0][1], 1)))\
         .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
         .mapValues(lambda x: x[0] / x[1])\
         .map(lambda x: (x[0][0], x[0][1], x[1]))\
         .sortBy(lambda x: (x[2], int(x[0])), False)
 
     ocp_gp = data\
-        .map(lambda x: ((x[0], x[1][1][2]), (x[1][0], 1)))\
+        .map(lambda x: ((x[1][0][0], x[1][1][2]), (x[1][0][1], 1)))\
         .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
         .mapValues(lambda x: x[0] / x[1])\
         .map(lambda x: (x[0][0], x[0][1], x[1]))\
