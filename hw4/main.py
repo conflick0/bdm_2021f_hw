@@ -40,9 +40,56 @@ def task1(ratings):
 
     print('task1 output ...')
 
-    hd = ['movie', 'score']
-    df = ratings.toDF(hd)
+    df = ratings.toDF(['movie', 'score'])
     df.show(20)
+
+
+@timer
+def task2(ratings, users):
+    '''
+    sorted in descending order of average rating score 
+    grouped by gender, by age group, and by occupation
+    '''
+    print('task2 running ...')
+
+    ratings = ratings\
+        .map(lambda x: (x[1], float(x[2])))
+
+    users = users\
+        .map(lambda x: (x[0], (x[1], x[2], x[3])))
+
+    data = ratings.join(users)
+
+    gd_gp = data\
+        .map(lambda x: ((x[0], x[1][1][0]), (x[1][0], 1)))\
+        .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
+        .mapValues(lambda x: x[0] / x[1])\
+        .map(lambda x: (x[0][0], x[0][1], x[1]))\
+        .sortBy(lambda x: (x[2], int(x[0])), False)
+
+    age_gp = data\
+        .map(lambda x: ((x[0], x[1][1][1]), (x[1][0], 1)))\
+        .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
+        .mapValues(lambda x: x[0] / x[1])\
+        .map(lambda x: (x[0][0], x[0][1], x[1]))\
+        .sortBy(lambda x: (x[2], int(x[0])), False)
+
+    ocp_gp = data\
+        .map(lambda x: ((x[0], x[1][1][2]), (x[1][0], 1)))\
+        .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
+        .mapValues(lambda x: x[0] / x[1])\
+        .map(lambda x: (x[0][0], x[0][1], x[1]))\
+        .sortBy(lambda x: (x[2], int(x[0])), False)
+
+    print('task2 output ...')
+
+    gd_df = gd_gp.toDF(['movie', 'gender', 'score'])
+    age_df = age_gp.toDF(['movie', 'age', 'score'])
+    ocp_df = ocp_gp.toDF(['movie', 'occupation', 'score'])
+
+    gd_df.show(20)
+    age_df.show(20)
+    ocp_df.show(20)
 
 
 if __name__ == '__main__':
@@ -62,7 +109,10 @@ if __name__ == '__main__':
 
     # read file
     ratings = read_file('hw4/data/ratings.dat')
+    users = read_file('hw4/data/users.dat')
 
     # task1
     task1(ratings)
 
+    # task2
+    task2(ratings, users)
