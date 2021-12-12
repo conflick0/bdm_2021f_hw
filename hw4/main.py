@@ -108,6 +108,49 @@ def task2(movies, ratings, users):
     ocp_df.show(20, False)
 
 
+def extract_genres(x):
+    uid, rat = x[1][0]
+    genres = (x[1][1]).split('|')
+    return list(map(lambda g: ((uid, g), (rat, 1)), genres))
+
+
+@timer
+def task3(movies, ratings):
+    '''
+    sorted in descending order of average rating score 
+    of each user for all movies, and by genre
+    '''
+    print('task3 running ...')
+
+    user_rats = ratings\
+        .map(lambda x: (x[0], (float(x[2]), 1)))\
+        .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
+        .mapValues(lambda x: x[0] / x[1])\
+        .sortBy(lambda x: (x[1], int(x[0])), False)
+
+    rats = ratings\
+        .map(lambda x: (x[1], (x[0], float(x[2]))))
+    
+    movs = movies\
+        .map(lambda x: (x[0], x[2]))
+
+    user_genre_rats = rats\
+        .join(movs)\
+        .flatMap(lambda x: extract_genres(x))\
+        .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
+        .mapValues(lambda x: x[0] / x[1])\
+        .map(lambda x: (x[0][0], x[0][1], x[1]))\
+        .sortBy(lambda x: (x[2], int(x[0])), False)
+
+    print('task3 output ...')
+
+    ur_df = user_rats.toDF(['user', 'score'])
+    ugr_df = user_genre_rats.toDF(['user', 'genre', 'score'])
+    
+    ur_df.show(20, False)
+    ugr_df.show(20, False)
+
+
 if __name__ == '__main__':
     # set spark config
     conf = SparkConf()\
@@ -133,3 +176,6 @@ if __name__ == '__main__':
 
     # task2
     task2(movies, ratings, users)
+
+    # taks3
+    task3(movies, ratings)
