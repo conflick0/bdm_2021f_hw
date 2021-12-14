@@ -41,7 +41,7 @@ def task1(ratings):
     print('task1 output ...')
 
     df = ratings.toDF(['movie', 'score'])
-    df.show(50)
+    df.show(100)
 
 
 @timer
@@ -71,9 +71,10 @@ def task2(ratings, users):
         .map(lambda x: ((x[1][0][0], x[1][1][1]), (x[1][0][1], 1)))\
         .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
         .mapValues(lambda x: x[0] / x[1])\
-        .map(lambda x: (x[0][0], x[0][1], x[1]))\
-        .sortBy(lambda x: (x[2], int(x[0]), int(x[1])), False)\
-
+        .map(lambda x: ((x[0][0], x[1]), [int(x[0][1])]))\
+        .reduceByKey(lambda a, b: a + b)\
+        .map(lambda x: (x[0][0], sorted(x[1]), x[0][1]))\
+        .sortBy(lambda x: (x[2], int(x[0])), False)\
 
     ocp_gp = data\
         .map(lambda x: ((x[1][0][0], x[1][1][2]), (x[1][0][1], 1)))\
@@ -89,9 +90,9 @@ def task2(ratings, users):
     age_df = age_gp.toDF(['movie', 'age', 'score'])
     ocp_df = ocp_gp.toDF(['movie', 'occupation', 'score'])
 
-    gd_df.show(50)
-    age_df.show(50)
-    ocp_df.show(50)
+    gd_df.show(100)
+    age_df.show(100)
+    ocp_df.show(100)
 
 
 def extract_genres(x):
@@ -133,8 +134,8 @@ def task3(movies, ratings):
     ur_df = user_rats.toDF(['user', 'score'])
     ugr_df = user_genre_rats.toDF(['user', 'genre', 'score'])
     
-    ur_df.show(50)
-    ugr_df.show(50)
+    ur_df.show(100)
+    ugr_df.show(100)
 
 
 if __name__ == '__main__':
