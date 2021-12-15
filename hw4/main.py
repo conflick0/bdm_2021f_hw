@@ -171,6 +171,8 @@ def task4(ratings):
         for j in range(3952): #movie
             matrix[i].append(averageMatrix[i][1])
 
+    del rdd
+
     matrixRDD = sc.parallelize(matrix)\
                 .zipWithIndex()
 
@@ -180,11 +182,40 @@ def task4(ratings):
             if item[0] == i:
                 rowData[item[1][0]] = item[1][1]
         
-        return rowData
+        return rowData, i
 
     matrixRDD = matrixRDD.map(paddingValue)
-    
-    print(matrixRDD.take(1))
+
+    pickUser = matrixRDD.filter(lambda x : x[1] == 3)\
+                        .first()
+
+    del ratingRDD, matrix
+
+    pickUserBC = sc.broadcast(pickUser)
+
+
+    def calcCosine(x):
+        userRowData, userI = pickUserBC.value
+        rowData, i = x
+        
+        # Dot and norm
+        dot = sum(a*b for a, b in zip(userRowData, rowData))
+        norm_a = sum(a*a for a in userRowData) ** 0.5
+        norm_b = sum(b*b for b in rowData) ** 0.5
+
+        # Cosine similarity
+        cos_sim = dot / (norm_a*norm_b)
+
+        return (i, cos_sim)
+        
+
+    cosineSimilarity = matrixRDD.map(calcCosine)\
+                                #.sortBy(lambda x : x[1])
+
+    # print(matrixRDD.take(1))
+    print("=================")
+    # print(pickUser)
+    print(cosineSimilarity.take(5))
 
 @timer
 def task5(ratings):
