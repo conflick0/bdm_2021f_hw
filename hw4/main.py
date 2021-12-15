@@ -137,6 +137,44 @@ def task3(movies, ratings):
     ur_df.show(100)
     ugr_df.show(100)
 
+@timer
+def task4(ratings):
+    # matrix = []
+    # for i in range(6040): # user
+    #     matrix.append([])
+    #     for j in range(3952): #movie
+    #         matrix[i].append(0)
+
+    # def buildMatrix(x):
+    #     global matrix
+
+    #     user = int(x[0]) - 1
+    #     movie = int(x[1]) - 1
+    #     rate = int(x[2])
+        
+    #     matrix[user][movie] = rate
+
+    # ratings.map(buildMatrix)
+
+    # for i in range(len(matrix[0])):
+    #     if matrix[0][i] > 0:
+    #         print('yes')
+
+    rdd = ratings.map(lambda x : (x[0], (int(x[2]), 1)))\
+                .reduceByKey(lambda a, b : (a[0] + b[0], a[1] + b[1]))\
+                .map(lambda x : (x[0], x[1][0] / x[1][1]))\
+                .sortBy(lambda x : int(x[0]))
+    
+    print(rdd.take(5))
+
+@timer
+def task5(ratings):
+    rdd = ratings.map(lambda x : (x[1], (int(x[2]), 1)))\
+                .reduceByKey(lambda a, b : (a[0] + b[0], a[1] + b[1]))\
+                .map(lambda x : (x[0], x[1][0] / x[1][1]))\
+                .sortBy(lambda x : int(x[0]))
+    
+    print(rdd.take(5))
 
 if __name__ == '__main__':
     # set spark config
@@ -159,10 +197,16 @@ if __name__ == '__main__':
     movies = read_file('hw4/data/movies.dat')
 
     # task1
-    task1(ratings)
+    # task1(ratings)
 
     # task2
-    task2(ratings, users)
+    # task2(ratings, users)
 
     # taks3
-    task3(movies, ratings)
+    # task3(movies, ratings)
+
+    # task4
+    # task4(ratings)
+
+    # task5
+    task5(ratings)
