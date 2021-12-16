@@ -142,11 +142,11 @@ def task3(movies, ratings):
     ur_df.show(100)
     ugr_df.show(100)
 
-def calcCosineSimimlarity(a, b):
+def calcCosineSimimlarity(vectorA, vectorB):
     # Dot and norm
-    dot = sum(a*b for a, b in zip(a, b))
-    norm_a = sum(a*a for a in a) ** 0.5
-    norm_b = sum(b*b for b in b) ** 0.5
+    dot = sum(a*b for a, b in zip(vectorA, vectorB))
+    norm_a = sum(a*a for a in vectorA) ** 0.5
+    norm_b = sum(b*b for b in vectorB) ** 0.5
 
     # Cosine similarity
     cos_sim = dot / (norm_a*norm_b)
@@ -224,9 +224,10 @@ def task4(ratings):
         
 
     cosineSimilarity = matrixRDD.map(calcCosine)\
-                                .sortBy(lambda x : int(x[1]*1000))
+                                #.sortBy(lambda x : -int(x[1]*1000))#Descending
 
     # print(matrixRDD.take(1))
+    print("task 4")
     print("=================")
     # print(pickUser)
     print(cosineSimilarity.take(5))
@@ -238,7 +239,78 @@ def task5(ratings):
                 .map(lambda x : (x[0], x[1][0] / x[1][1]))\
                 .sortBy(lambda x : int(x[0]))
     
-    print(rdd.take(5))
+    # print(rdd.take(5))
+
+    #[('1', 3.4), ('2', 5), ('3', 4.5)]
+    averageMatrix = rdd.collect()
+
+    averageMatrixBC = sc.broadcast(averageMatrix)
+
+    # 將ratings再次清理
+    def clearRatings(x):
+        user = int(x[0]) - 1
+        movie = int(x[1]) - 1
+        rate = int(x[2])
+        
+        return (movie, (user, rate))
+
+    ratingRDD = ratings.map(clearRatings)\
+                        .sortByKey()
+
+    # [(0, (1192, 5)), (0, (660, 3)), (0, (913, 3)), (0, (3407, 4)), (0, (2354, 5))]
+    # print(ratingRDD.take(5))
+
+    ratingBC = sc.broadcast(ratingRDD.collect())
+
+    matrix = []
+    for i in range(3952): # movie
+        matrix.append([])
+        for j in range(6040): # user
+            #缺值補0
+            matrix[i].append(0)
+
+    del rdd
+
+    matrixRDD = sc.parallelize(matrix)\
+                .zipWithIndex()
+
+    def paddingValue(x):
+        rowData, i = x
+        for item in ratingBC.value:
+            if item[0] == i:
+                # 每個值減去平均
+                rowData[item[1][0]] = item[1][1] - averageMatrixBC.value[i][1]
+        
+        return rowData, i
+
+    matrixRDD = matrixRDD.map(paddingValue)
+
+
+    pickMovie = matrixRDD.filter(lambda x : x[1] == 3)\
+                        .first()
+
+    del ratingRDD, matrix
+
+    pickMovieBC = sc.broadcast(pickMovie)
+
+
+    def calcCosine(x):
+        movieRowData, movieI = pickMovieBC.value
+        rowData, i = x
+        
+        cos_sim = calcCosineSimimlarity(movieRowData, rowData)
+
+        return (i, cos_sim)
+        
+
+    cosineSimilarity = matrixRDD.map(calcCosine)\
+                                #.sortBy(lambda x : -int(x[1]*1000))#Descending
+
+    # print(matrixRDD.take(1))
+    print("task 5")
+    print("=================")
+    # print(pickMovie)
+    print(cosineSimilarity.take(5))
 
 if __name__ == '__main__':
     # set spark config
@@ -261,16 +333,16 @@ if __name__ == '__main__':
     movies = read_file('hw4/data/movies.dat')
 
     # task1
-    # task1(ratings)
+    task1(ratings)
 
     # task2
-    # task2(ratings, users)
+    task2(ratings, users)
 
     # taks3
-    # task3(movies, ratings)
+    task3(movies, ratings)
 
     # task4
     task4(ratings)
 
     # task5
-    # task5(ratings)
+    task5(ratings)
