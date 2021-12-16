@@ -142,6 +142,17 @@ def task3(movies, ratings):
     ur_df.show(100)
     ugr_df.show(100)
 
+def calcCosineSimimlarity(a, b):
+    # Dot and norm
+    dot = sum(a*b for a, b in zip(a, b))
+    norm_a = sum(a*a for a in a) ** 0.5
+    norm_b = sum(b*b for b in b) ** 0.5
+
+    # Cosine similarity
+    cos_sim = dot / (norm_a*norm_b)
+
+    return cos_sim
+
 @timer
 def task4(ratings):
 
@@ -153,6 +164,8 @@ def task4(ratings):
 
     #[('1', 3.4), ('2', 5), ('3', 4.5)]
     averageMatrix = rdd.collect()
+
+    averageMatrixBC = sc.broadcast(averageMatrix)
 
     # 將ratings再次清理
     def clearRatings(x):
@@ -174,7 +187,8 @@ def task4(ratings):
     for i in range(6040): # user
         matrix.append([])
         for j in range(3952): #movie
-            matrix[i].append(averageMatrix[i][1])
+            #缺值補0
+            matrix[i].append(0)
 
     del rdd
 
@@ -185,7 +199,8 @@ def task4(ratings):
         rowData, i = x
         for item in ratingBC.value:
             if item[0] == i:
-                rowData[item[1][0]] = item[1][1]
+                # 每個值減去平均
+                rowData[item[1][0]] = item[1][1] - averageMatrixBC.value[i][1]
         
         return rowData, i
 
@@ -203,19 +218,13 @@ def task4(ratings):
         userRowData, userI = pickUserBC.value
         rowData, i = x
         
-        # Dot and norm
-        dot = sum(a*b for a, b in zip(userRowData, rowData))
-        norm_a = sum(a*a for a in userRowData) ** 0.5
-        norm_b = sum(b*b for b in rowData) ** 0.5
-
-        # Cosine similarity
-        cos_sim = dot / (norm_a*norm_b)
+        cos_sim = calcCosineSimimlarity(userRowData, rowData)
 
         return (i, cos_sim)
         
 
     cosineSimilarity = matrixRDD.map(calcCosine)\
-                                #.sortBy(lambda x : x[1])
+                                .sortBy(lambda x : int(x[1]*1000))
 
     # print(matrixRDD.take(1))
     print("=================")
@@ -252,16 +261,16 @@ if __name__ == '__main__':
     movies = read_file('hw4/data/movies.dat')
 
     # task1
-    task1(ratings)
+    # task1(ratings)
 
     # task2
-    task2(ratings, users)
+    # task2(ratings, users)
 
     # taks3
-    task3(movies, ratings)
+    # task3(movies, ratings)
 
     # task4
-    # task4(ratings)
+    task4(ratings)
 
     # task5
     # task5(ratings)
