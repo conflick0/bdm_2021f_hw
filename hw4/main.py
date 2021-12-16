@@ -44,6 +44,14 @@ def task1(ratings):
     df.show(100)
 
 
+def cal_gp_avg_rating(mid, ls):
+    ages = sorted(list(set(list(map(lambda x: x[0], ls)))))
+    ratings = list(map(lambda x: x[1], ls))
+    avg_ratings = sum(ratings) / len(ratings)
+    return (mid, ages, avg_ratings)
+
+
+
 @timer
 def task2(ratings, users):
     '''
@@ -68,13 +76,10 @@ def task2(ratings, users):
         .sortBy(lambda x: (x[2], int(x[0]), ord(x[1])), False)\
 
     age_gp = data\
-        .map(lambda x: ((x[1][0][0], x[1][1][1]), (x[1][0][1], 1)))\
-        .reduceByKey(lambda a, b: (a[0] + b[0], a[1] + b[1]))\
-        .mapValues(lambda x: x[0] / x[1])\
-        .map(lambda x: ((x[0][0], x[1]), [int(x[0][1])]))\
-        .reduceByKey(lambda a, b: a + b)\
-        .map(lambda x: (x[0][0], sorted(x[1]), x[0][1]))\
-        .sortBy(lambda x: (x[2], int(x[0])), False)\
+        .map(lambda x: ((int(x[1][0][0])), (int(x[1][1][1]), x[1][0][1])))\
+        .groupByKey()\
+        .map(lambda x: cal_gp_avg_rating(x[0], list(x[1])))\
+        .sortBy(lambda x: (x[2], x[0]), False)
 
     ocp_gp = data\
         .map(lambda x: ((x[1][0][0], x[1][1][2]), (x[1][0][1], 1)))\
@@ -91,7 +96,7 @@ def task2(ratings, users):
     ocp_df = ocp_gp.toDF(['movie', 'occupation', 'score'])
 
     gd_df.show(100)
-    age_df.show(100)
+    age_df.show(100, False)
     ocp_df.show(100)
 
 
@@ -247,16 +252,16 @@ if __name__ == '__main__':
     movies = read_file('hw4/data/movies.dat')
 
     # task1
-    # task1(ratings)
+    task1(ratings)
 
     # task2
-    # task2(ratings, users)
+    task2(ratings, users)
 
     # taks3
-    # task3(movies, ratings)
+    task3(movies, ratings)
 
     # task4
-    task4(ratings)
+    # task4(ratings)
 
     # task5
     # task5(ratings)
