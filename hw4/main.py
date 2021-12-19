@@ -149,7 +149,12 @@ def calcCosineSimimlarity(vectorA, vectorB):
     norm_b = sum(b*b for b in vectorB) ** 0.5
 
     # Cosine similarity
-    cos_sim = dot / (norm_a*norm_b)
+    cos_sim = 0
+    try:
+        cos_sim = dot / (norm_a*norm_b)
+    except ZeroDivisionError:
+        cos_sim = -1
+        print('zero division error')
 
     return cos_sim
 
