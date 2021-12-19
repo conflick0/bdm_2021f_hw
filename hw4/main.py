@@ -159,13 +159,13 @@ def calcCosineSimimlarity(vectorA, vectorB):
     return cos_sim
 
 @timer
-def task4(ratings):
+def task4(ratings, userId):
 
     # 計算平均
-    rdd = ratings.map(lambda x : (x[0], (int(x[2]), 1)))\
+    rdd = ratings.map(lambda x : (int(x[0]), (int(x[2]), 1)))\
                 .reduceByKey(lambda a, b : (a[0] + b[0], a[1] + b[1]))\
                 .map(lambda x : (x[0], x[1][0] / x[1][1]))\
-                .sortBy(lambda x : int(x[0]))
+                .sortByKey()
 
     #[('1', 3.4), ('2', 5), ('3', 4.5)]
     averageMatrix = rdd.collect()
@@ -211,7 +211,7 @@ def task4(ratings):
 
     matrixRDD = matrixRDD.map(paddingValue)
 
-    pickUser = matrixRDD.filter(lambda x : x[1] == 3)\
+    pickUser = matrixRDD.filter(lambda x : x[1] == userId)\
                         .first()
 
     del ratingRDD, matrix
@@ -229,7 +229,7 @@ def task4(ratings):
         
 
     cosineSimilarity = matrixRDD.map(calcCosine)\
-                                #.sortBy(lambda x : -int(x[1]*1000))#Descending
+                                .sortBy(lambda x : -int(x[1]*1000))#Descending
 
     # print(matrixRDD.take(1))
     print("task 4")
@@ -238,13 +238,13 @@ def task4(ratings):
     print(cosineSimilarity.take(5))
 
 @timer
-def task5(ratings):
-    rdd = ratings.map(lambda x : (x[1], (int(x[2]), 1)))\
+def task5(ratings, movieId):
+    rdd = ratings.map(lambda x : (int(x[1]), (int(x[2]), 1)))\
                 .reduceByKey(lambda a, b : (a[0] + b[0], a[1] + b[1]))\
                 .map(lambda x : (x[0], x[1][0] / x[1][1]))\
-                .sortBy(lambda x : int(x[0]))
+                .sortByKey()
     
-    # print(rdd.take(5))
+    # print(rdd.count())
 
     #[('1', 3.4), ('2', 5), ('3', 4.5)]
     averageMatrix = rdd.collect()
@@ -284,14 +284,21 @@ def task5(ratings):
         for item in ratingBC.value:
             if item[0] == i:
                 # 每個值減去平均
-                rowData[item[1][0]] = item[1][1] - averageMatrixBC.value[i][1]
-        
+                try: 
+                    assert item[1][0] < 6040 and i < 3952
+                    avg = tuple(filter(lambda a: a[0] == (i+1), averageMatrixBC.value))
+                    rowData[item[1][0]] = item[1][1] - avg[0][1]
+                except IndexError: 
+                    print(i, item[1][0], item[1][1])
+                except AssertionError:
+                    print("index範圍超出")
+
         return rowData, i
 
     matrixRDD = matrixRDD.map(paddingValue)
 
 
-    pickMovie = matrixRDD.filter(lambda x : x[1] == 3)\
+    pickMovie = matrixRDD.filter(lambda x : x[1] == movieId)\
                         .first()
 
     del ratingRDD, matrix
@@ -309,13 +316,13 @@ def task5(ratings):
         
 
     cosineSimilarity = matrixRDD.map(calcCosine)\
-                                #.sortBy(lambda x : -int(x[1]*1000))#Descending
+                                .sortBy(lambda x : -int(x[1]*1000))#Descending
 
     # print(matrixRDD.take(1))
     print("task 5")
     print("=================")
     # print(pickMovie)
-    print(cosineSimilarity.take(5))
+    print(cosineSimilarity.take(10))
 
 if __name__ == '__main__':
     # set spark config
@@ -347,7 +354,7 @@ if __name__ == '__main__':
     task3(movies, ratings)
 
     # task4
-    task4(ratings)
+    task4(ratings, 3)
 
     # task5
-    task5(ratings)
+    task5(ratings, 3)
